@@ -1,0 +1,19 @@
+#define which version to use 
+FROM golang:1.22-alpine AS builder
+#define the workdir
+WORKDIR /app
+#copy dependencies and neccessary files
+COPY go.mod go.sum ./
+#Run download cammand
+RUN go mod download
+#copy the code now
+COPY . .
+#compile the binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o auth-api ./cmd/api/main.go
+FROM alpine:latest
+RUN apk --no-cache and ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/auth-api .
+#bind port and run
+EXPOSE 8080
+CMD ["./auth-api"]

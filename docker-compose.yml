@@ -1,0 +1,24 @@
+#this is compose file version not extension or database version
+version: '3.8'
+#here we defince all the containers
+services:
+#this is the host name of the container inside docker database can be called using name postgers
+  postgres:
+  #define what to use and what version in our case it will be version 18
+    image: postgres:18-alpine
+  #name the container
+    container_name: video_plateform_db
+  #environment variable
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: aman12345
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+  #where to store data in case container is destroyed
+    volumes:
+      - postgres_data:/var/lib/postgresql
+#tell docker that the volume is defined by us and create a storage if not exists
+volumes:
+  postgres_data:
+
