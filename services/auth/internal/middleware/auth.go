@@ -9,8 +9,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 )
-var jwtSecretKey = os.Getenv("jwtSecretKey")
-var jwtRefreshKey = os.Getenv("jwtRefreshKey")
+var jwtSecretKey = []byte(os.Getenv("jwtSecretKey"))
+var jwtRefreshKey = []byte(os.Getenv("jwtRefreshKey"))
 
 func RequestAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func RequestAuth(next http.Handler) http.Handler {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return []byte(jwtSecretKey), nil
+			return jwtSecretKey, nil
 		})
 
 		if err != nil || !token.Valid {

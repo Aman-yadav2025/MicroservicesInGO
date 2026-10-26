@@ -38,7 +38,9 @@ func main() {
 	r.Post("/signup", handler.Signup)
 	r.Post("/login", handler.Login)
 	r.Post("/refresh",handler.RefrehToken)
-
+	r.Post("/logout", handler.Logout)
+	r.Post("/forgot-password", handler.ForgotPassword)
+	r.Post("/reset-password",handler.ResetPassword)
 	//middleware protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(m.RequestAuth)
