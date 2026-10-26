@@ -11,6 +11,10 @@ type SignupRequest struct {
 	Password string `json:"password"`
 }
 
+type RefreshToekn struct{
+	RefreshToken string `json:"refresh_token"`
+}
+
 func Signup(w http.ResponseWriter, r *http.Request){
 	var req SignupRequest
 
@@ -38,13 +42,34 @@ func Login(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	token,err:= service.LoginUser(req.Email,req.Password)
+	AccessToken,RefreshToken,err:= service.LoginUser(req.Email,req.Password)
 	if err != nil {
 		http.Error(w,err.Error(),http.StatusUnauthorized)
 		return
 	}
 	w.Header().Set("Content-Type","application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"token":token,
+		"access_token": AccessToken,
+		"refresh_token" : RefreshToken,
+	})
+}
+
+func RefrehToken(w http.ResponseWriter, r *http.Request){
+	var req RefreshToekn
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w,"Invalid request Body",http.StatusBadRequest)
+		return
+	}
+	newAccessToken,newRefreshToken,err := service.RefreshAccessToken(req.RefreshToken)
+
+	if err != nil {
+		http.Error(w,"Invalid or expired refresh Token",http.StatusUnauthorized)
+		return
+	}
+	w.Header().Set("Content-Type","json/application")
+	json.NewEncoder(w).Encode(map[string]string{
+		"access_token": newAccessToken,
+		"refresh_token" : newRefreshToken,
 	})
 }

@@ -10,11 +10,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 
 	m "auth-service/internal/middleware"
 )
 
 func main() {
+
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Failed to Load env")
+	}
 
 	//connect to the database
 	repository.Connect_DB() // this grants us the excess to the DB that exists in folder repo db.go
@@ -32,6 +37,7 @@ func main() {
 	//post request
 	r.Post("/signup", handler.Signup)
 	r.Post("/login", handler.Login)
+	r.Post("/refresh",handler.RefrehToken)
 
 	//middleware protected routes
 	r.Group(func(r chi.Router) {
