@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -13,9 +12,6 @@ import (
 var DB *gorm.DB
 
 func Connect_DB() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("env can't be loaded")
-	}
 	dsn := os.Getenv("DB_DSN")
 
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -24,10 +20,10 @@ func Connect_DB() {
 		log.Fatalf("Failed to connect to database with error %v", err)
 	}
 
-	err = database.AutoMigrate(&model.User{},&model.RefreshToken{},&model.PasswordReset{})
+	err = database.AutoMigrate(&model.User{}, &model.RefreshToken{}, &model.PasswordReset{})
 
 	if err != nil {
-		log.Fatalf("Failed to migrate database with error %v",err)
+		log.Fatalf("Failed to migrate database with error %v", err)
 	}
 
 	DB = database

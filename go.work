@@ -1,3 +1,6 @@
 go 1.27.3
 
-use ./services/auth
+use (
+	./services/auth
+	./services/video-catalog
+)
