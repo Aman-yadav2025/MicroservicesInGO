@@ -3,12 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 	"video-catalog/internal/service"
+
+	"video-catalog/internal/storage"
 )
 
 type UploadVideoRequest struct {
@@ -19,6 +20,8 @@ type UploadVideoRequest struct {
 }
 
 var MAX_UPLOAD_SIZE = 500 << 20 // max 500MB
+
+var Storage storage.Provider
 
 func UploadVideo(w http.ResponseWriter, r *http.Request) {
 	var req UploadVideoRequest
@@ -59,36 +62,57 @@ func UploadVideoFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, handler, err := r.FormFile("video-file")
+	file, header, err := r.FormFile("video_file")
 
 	if err != nil {
 		http.Error(w, "Failed to retrive Video file", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
-	//give unique name
-	fileName := fmt.Sprintf("%d%s", time.Now().UnixNano(), filepath.Ext(handler.Filename))
-	//unique save path
-	savePath := filepath.Join("uploads", "videos", fileName)
+	// //give unique name
+	// fileName := fmt.Sprintf("%d%s", time.Now().UnixNano(), filepath.Ext(header.Filename))
+	// //unique save path for local storage
+	// savePath := filepath.Join("uploads", "videos", fileName)
 
-	dst, err := os.Create(savePath)
+	// dst, err := os.Create(savePath)
 
-	if err != nil {
-		http.Error(w, "failed to save file", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
+	// if err != nil {
+	// 	http.Error(w, "failed to save file", http.StatusInternalServerError)
+	// 	return
+	// }
+	// defer dst.Close()
 
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "failed to write file", http.StatusInternalServerError)
-		return
-	}
+	// if _, err := io.Copy(dst, file); err != nil {
+	// 	http.Error(w, "failed to write file", http.StatusInternalServerError)
+	// 	return
+	// }
+	//common for both minio and local storage
 	title := r.FormValue("title")
 	description := r.FormValue("description")
+	if title == "" {
+		http.Error(w, "Title is required", http.StatusBadRequest)
+		return
+	}
+	uniqueFileName := fmt.Sprintf("%d%s",time.Now().UnixNano(),filepath.Ext(header.Filename))
+	size := header.Size
+
+	contentType := header.Header.Get("Content-Type")
+
+	if contentType == ""{
+		contentType = "application/octet-stream"
+	}
+
+	videoUrl,err := Storage.UploadFile(r.Context(),file,uniqueFileName,size,contentType)
+	
+	if err != nil {
+        http.Error(w, "Failed to upload file to storage", http.StatusInternalServerError)
+        return
+    }
+
 
 	userID := r.Context().Value("user_id").(uint)
 
-	video, err := service.CreateVideo(title, description, savePath, "", userID)
+	video, err := service.CreateVideo(title, description, videoUrl, "", userID)
 
 	if err != nil {
 		http.Error(w, "failed to save to database", http.StatusInternalServerError)
@@ -97,4 +121,35 @@ func UploadVideoFile(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write(fmt.Appendf(nil, "Video %s is uploaded successfully", video.Title))
+}
+
+func GetPage(w http.ResponseWriter, r *http.Request) {
+	page := 1
+	limit := 10
+	// GET /videos?page=2&limit=5\
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if ParsePage, err := strconv.Atoi(pageStr); err == nil && ParsePage > 0 {
+			page = ParsePage
+		}
+	}
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if limitParse, err := strconv.Atoi(limitStr); err == nil && limitParse > 0 && limitParse < 50 {
+			limit = limitParse
+		}
+	}
+
+	videos, total, err := service.GetVideos(page, limit)
+
+	if err != nil {
+		http.Error(w, "Failed to fetch Videos", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data":        videos,
+		"page":        page,
+		"limit":       limit,
+		"total_count": total,
+	})
 }

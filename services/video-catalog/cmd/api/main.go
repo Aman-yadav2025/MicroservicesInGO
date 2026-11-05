@@ -5,8 +5,9 @@ import (
 	"log"
 	"net/http"
 	"video-catalog/internal/handler"
-	"video-catalog/internal/repository"
 	m "video-catalog/internal/middleware"
+	"video-catalog/internal/repository"
+	"video-catalog/internal/storage"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,6 +23,20 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	minioStore, err := storage.NewMinioStorage(
+    "127.0.0.1:9000",
+    "minioadmin",
+    "minioadmin",
+    "videos",
+    false,
+    )
+
+	if err != nil {
+		log.Fatal("Failed to intiallize minio Storage : ", err)
+	}
+
+	handler.Storage = minioStore
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

@@ -24,3 +24,16 @@ func GetAllVideos() ([]model.Video,error){
 	err := repository.DB.Order("created_at desc").Find(&videos).Error
 	return videos,err
 }
+
+func GetVideos(page int , limit int) ([]model.Video,int64,error){
+	var videos []model.Video
+	var totalCount int64
+
+	repository.DB.Model(model.Video{}).Count(&totalCount)
+
+	offset := (page -1 )*limit
+
+	err := repository.DB.Order("created_at desc").Limit(limit).Offset(offset).Find(&videos).Error
+
+	return videos,totalCount,err
+}
